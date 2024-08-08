@@ -1,13 +1,14 @@
 """
 This script generates a cohesive script based on the transcripts of multiple YouTube videos
 using the YouTube Transcript API and the GoogleGemini API.
-
 """
-
+from datetime import datetime
 import streamlit as st
 from youtube_transcript_api import YouTubeTranscriptApi
 # import google.generativeai as genai
 from pytube import YouTube
+from docx import Document
+
 
 
 # Streamlit app configuration
@@ -60,14 +61,24 @@ if st.sidebar.button("Transcrire les vidéos"):
         language = all_supported_languages[language]
         videos_transcripts = YouTubeTranscriptApi.get_transcripts(videos, languages=[language])
         videos_transcripts_list = []
+        videos_transcripts_paragraphs = []
         for index, video_id in enumerate(videos):
             videos_transcripts_dict = {"duration": videos_ids[index].length}
             videos_transcripts_dict["video_id"] = video_id
             videos_transcripts_dict["author"] = videos_ids[index].author
             videos_transcripts_dict["title"] = videos_ids[index].title
             videos_transcripts_dict["transcript"] = " ".join([t["text"] for t in videos_transcripts[0][video_id]])
+            videos_transcripts_paragraphs.append(videos_transcripts_dict["transcript"])
             videos_transcripts_dict["transcript"] = videos_transcripts_dict["transcript"].replace("\n", " ")
             videos_transcripts_list.append(videos_transcripts_dict)
+            document = Document()
+            document.add_paragraph(" ".join(videos_transcripts_paragraphs))
+            today_date = datetime.today()
+            to_day = today_date.strftime("%d-%m-%Y")
+            document_name = f"{videos_ids[index].title}_{to_day}.docx"
+            document.save(f"{document_name}")
+            with open(f'{document_name}', 'rb') as f:
+                st.download_button('Telecharger la transcription en docx', f, file_name=f'{document_name}')
         st.success("Les transcriptions ont été récupérées avec succès !")
         st.json(videos_transcripts_list)
     except Exception as e:
